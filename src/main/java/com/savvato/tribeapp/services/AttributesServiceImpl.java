@@ -5,7 +5,10 @@ import com.savvato.tribeapp.controllers.dto.PhraseSequenceRequest;
 import com.savvato.tribeapp.dto.AttributeDTO;
 import com.savvato.tribeapp.dto.PhraseDTO;
 import com.savvato.tribeapp.entities.PhraseSequence;
+import com.savvato.tribeapp.entities.ToBeReviewed;
 import com.savvato.tribeapp.repositories.PhraseSequenceRepository;
+import com.savvato.tribeapp.repositories.ReviewSubmittingUserRepository;
+import com.savvato.tribeapp.repositories.ToBeReviewedRepository;
 import com.savvato.tribeapp.repositories.UserPhraseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,8 +29,14 @@ public class AttributesServiceImpl implements AttributesService {
     @Autowired
     private PhraseSequenceRepository phraseSequenceRepository;
 
+    @Autowired
+    private ToBeReviewedRepository toBeReviewedRepository;
+
+    @Autowired
+    ReviewSubmittingUserRepository reviewSubmittingUserRepository;
+
     @Override
-    public Optional<List<AttributeDTO>> getAttributesByUserId(Long userId) {
+    public Optional<Map<String, List<AttributeDTO>>> getAttributesByUserId(Long userId) {
 
         List<PhraseSequence> phraseSequences = phraseSequenceRepository.findByUserIdOrderByPosition(userId);
 
@@ -62,12 +71,41 @@ public class AttributesServiceImpl implements AttributesService {
                     })
                     .collect(Collectors.toList());
             attributes.sort(Comparator.comparingLong(a -> (a.phrase.id)));
+            List<AttributeDTO> pendingAttributes = getPhrasesToBeReviewedByUserId(userId);
 
-            return Optional.of(attributes);
+            Map<String, List<AttributeDTO>> resultMap = new HashMap<>();
+            resultMap.put("attributes", attributes);
+            resultMap.put("pendingAttributes", pendingAttributes);
+
+            return Optional.of(resultMap);
         }
 
         // If no phrases found, return an empty list
-        return Optional.of(Collections.emptyList());
+        return Optional.of(Collections.emptyMap());
+    }
+
+    public List<AttributeDTO> getPhrasesToBeReviewedByUserId(Long userId) {
+        List<Long> toBeReviewedIds = reviewSubmittingUserRepository.findToBeReviewedIdByUserId(userId);
+        List<ToBeReviewed> toBeReviewedList = new ArrayList<>();
+        for (Long id : toBeReviewedIds) {
+            Optional<ToBeReviewed> optionalToBeReviewed = toBeReviewedRepository.findById(id);
+            optionalToBeReviewed.ifPresent(toBeReviewedList::add);
+        }
+
+        return toBeReviewedList.stream()
+                .map(toBeReviewed -> AttributeDTO.builder()
+                        .phrase(PhraseDTO.builder()
+                                .id(toBeReviewed.getId())
+                                .verb(toBeReviewed.getVerb())
+                                .adverb(toBeReviewed.getAdverb())
+                                .preposition(toBeReviewed.getPreposition())
+                                .noun(toBeReviewed.getNoun())
+                                .build())
+                        .userCount(0)
+                        .sequence(0)
+                        .build()
+                )
+                .collect(Collectors.toList());
     }
 
     //create a senario where false is returned
@@ -79,6 +117,7 @@ public class AttributesServiceImpl implements AttributesService {
 
         return true;
     }
+
     @Transactional
     public void updatePhraseSequences(long userId, PhraseSequenceDataRequest phrase) {
 

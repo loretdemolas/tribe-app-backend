@@ -1,6 +1,7 @@
 package com.savvato.tribeapp.repositories;
 
 import com.savvato.tribeapp.entities.ToBeReviewed;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
@@ -19,4 +20,5 @@ public interface ToBeReviewedRepository extends CrudRepository<ToBeReviewed, Lon
 
     Optional<ToBeReviewed> findByAdverbAndVerbAndNounAndPreposition(String adverb, String verb, String noun, String preposition);
 
+    Optional<ToBeReviewed> findById(Long id);
 }

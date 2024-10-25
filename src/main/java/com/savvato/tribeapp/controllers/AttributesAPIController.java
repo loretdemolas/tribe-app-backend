@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -54,15 +55,17 @@ public class AttributesAPIController {
 
     @GetAttributesForUser
     @GetMapping("/{userId}")
-    public ResponseEntity<List<AttributeDTO>> getAttributesForUser(
+    public ResponseEntity<Map<String, List<AttributeDTO>>> getAttributesForUser(
             @Parameter(description = "User ID of user", example = "1") @PathVariable Long userId) {
 
-        Optional<List<AttributeDTO>> opt = attributesService.getAttributesByUserId(userId);
+        Optional<Map<String, List<AttributeDTO>>> opt = attributesService.getAttributesByUserId(userId);
 
-        if (opt.isPresent()) return ResponseEntity.status(HttpStatus.OK).body(opt.get());
-        else return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        if (opt.isPresent()) {
+            return ResponseEntity.status(HttpStatus.OK).body(opt.get());
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
     }
-        
 
     @PostMapping("/update")
     public ResponseEntity<GenericResponseDTO> uPhraseSequences(@RequestBody @Valid PhraseSequenceRequest req) {
