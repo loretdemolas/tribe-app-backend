@@ -7,7 +7,10 @@ import com.savvato.tribeapp.constants.UserTestConstants;
 import com.savvato.tribeapp.dto.AttributeDTO;
 import com.savvato.tribeapp.dto.PhraseDTO;
 import com.savvato.tribeapp.entities.PhraseSequence;
+import com.savvato.tribeapp.entities.ToBeReviewed;
 import com.savvato.tribeapp.repositories.PhraseSequenceRepository;
+import com.savvato.tribeapp.repositories.ReviewSubmittingUserRepository;
+import com.savvato.tribeapp.repositories.ToBeReviewedRepository;
 import com.savvato.tribeapp.repositories.UserPhraseRepository;
 import com.savvato.tribeapp.services.AttributesService;
 import com.savvato.tribeapp.services.AttributesServiceImpl;
@@ -47,107 +50,186 @@ public class AttributesServiceImplTest implements UserTestConstants, PhraseTestC
     UserPhraseRepository userPhraseRepository;
     @MockBean
     PhraseSequenceRepository phraseSequenceRepository;
+    @MockBean
+    ToBeReviewedRepository toBeReviewedRepository;
+    @MockBean
+    ReviewSubmittingUserRepository reviewSubmittingUserRepository;
 
 
-//    @Test
-//    public void testGetAttributesByUserId_EmptyPhrases() {
-//        Long userId = 1L;
-//
-//        // Mock an empty list of phrase sequences
-//        when(phraseSequenceRepository.findByUserIdOrderByPosition(userId)).thenReturn(Collections.emptyList());
-//
-//        // Mock an empty Optional from phraseService
-//        when(phraseService.getPhraseInformationByUserId(userId)).thenReturn(Optional.empty());
-//
-//        Optional<List<AttributeDTO>> result = attributesService.getAttributesByUserId(userId);
-//
-//        assertTrue(result.isPresent());
-//        assertTrue(result.get().isEmpty());
-//    }
-//
-//    public void getAttributesByUserIdWhenAttributesExist() {
-//        Long userId = USER1_ID;
-//        Map<PhraseDTO, Integer> phraseInformation =
-//                Map.of(
-//                        PhraseDTO.builder()
-//                                .adverb(ADVERB1_WORD)
-//                                .verb(VERB1_WORD)
-//                                .noun(NOUN1_WORD)
-//                                .build(), 1,
-//                        PhraseDTO.builder()
-//                                .adverb(ADVERB2_WORD)
-//                                .verb(VERB2_WORD)
-//                                .preposition(PREPOSITION2_WORD)
-//                                .noun(NOUN2_WORD)
-//                                .build(), 2);
-//        List<AttributeDTO> attributes = phraseInformation
-//                .entrySet()
-//                .stream()
-//                .map(
-//                        entry -> AttributeDTO.builder().phrase(entry.getKey()).userCount(entry.getValue()).build()
-//                )
-//                .toList();
-//        ArgumentCaptor<Long> userIdArgumentCaptor = ArgumentCaptor.forClass(Long.class);
-//
-//        Optional<List<AttributeDTO>> expected = Optional.of(attributes);
-//        when(phraseService.getPhraseInformationByUserId(anyLong()))
-//                .thenReturn(Optional.of(phraseInformation));
-//        Optional<List<AttributeDTO>> actual = attributesService.getAttributesByUserId(userId);
-//        verify(phraseService, times(1)).getPhraseInformationByUserId(userIdArgumentCaptor.capture());
-//        assertEquals(userIdArgumentCaptor.getValue(), userId);
-//        assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
-//    }
-//
-//    @Test
-//    public void testGetAttributesByUserId_WithPhrases() {
-//        Long userId = 1L;
-//
-//        // Create phrase sequences for this user
-//        List<PhraseSequence> phraseSequences = Arrays.asList(
-//                new PhraseSequence(userId, 1L, 1),
-//                new PhraseSequence(userId, 2L, 2)
-//        );
-//
-//        // Create a map of PhraseDTO and their counts
-//        Map<PhraseDTO, Integer> phraseInfo = new HashMap<>();
-//        PhraseDTO phrase1 = PhraseDTO.builder().id(1L).adverb("enthusiastically").verb("volunteers").preposition("at").noun("UNICEF").build();
-//        PhraseDTO phrase2 = PhraseDTO.builder().id(2L).adverb("happily").verb("sings").preposition("at").noun("party").build();
-//
-//        phraseInfo.put(phrase1, 3);
-//        phraseInfo.put(phrase2, 5);
-//
-//        // Mock the responses from the repository and the service
-//        when(phraseSequenceRepository.findByUserIdOrderByPosition(userId)).thenReturn(phraseSequences);
-//        when(phraseService.getPhraseInformationByUserId(userId)).thenReturn(Optional.of(phraseInfo));
-//
-//        // Call the method and verify the results
-//        Optional<List<AttributeDTO>> result = attributesService.getAttributesByUserId(userId);
-//
-//        assertTrue(result.isPresent());
-//        List<AttributeDTO> attributes = result.get();
-//
-//        assertEquals(2, attributes.size());
-//
-//        // Validate the first attribute
-//        AttributeDTO attr1 = attributes.get(0);
-//        assertEquals(1L, attr1.phrase.id);
-//        assertEquals("enthusiastically", attr1.phrase.adverb);
-//        assertEquals("volunteers", attr1.phrase.verb);
-//        assertEquals("at", attr1.phrase.preposition);
-//        assertEquals("UNICEF", attr1.phrase.noun);
-//        assertEquals(3, attr1.userCount);
-//        assertEquals(1, attr1.sequence);
-//
-//        // Validate the second attribute
-//        AttributeDTO attr2 = attributes.get(1);
-//        assertEquals(2L, attr2.phrase.id);
-//        assertEquals("happily", attr2.phrase.adverb);
-//        assertEquals("sings", attr2.phrase.verb);
-//        assertEquals("at", attr2.phrase.preposition);
-//        assertEquals("party", attr2.phrase.noun);
-//        assertEquals(5, attr2.userCount);
-//        assertEquals(2, attr2.sequence);
-//    }
+    @Test
+    public void testGetAttributesByUserId_EmptyPhrases() {
+        Long userId = 1L;
+
+        when(phraseSequenceRepository.findByUserIdOrderByPosition(userId)).thenReturn(Collections.emptyList());
+
+        when(phraseService.getPhraseInformationByUserId(userId)).thenReturn(Optional.empty());
+
+        Optional<Map<String, List<AttributeDTO>>> result = attributesService.getAttributesByUserId(userId);
+
+        assertTrue(result.isPresent());
+        assertTrue(result.get().get("attributes").isEmpty());
+        assertTrue(result.get().get("pendingAttributes").isEmpty());
+    }
+
+    @Test
+    public void getAttributesByUserIdWhenAttributesExist() {
+        Long userId = USER1_ID;
+
+        List<PhraseSequence> phraseSequences = Arrays.asList(
+                new PhraseSequence(userId, 1L, 1),
+                new PhraseSequence(userId, 2L, 2)
+        );
+        when(phraseSequenceRepository.findByUserIdOrderByPosition(userId)).thenReturn(phraseSequences);
+
+        Map<PhraseDTO, Integer> phraseInformation = Map.of(
+                PhraseDTO.builder().id(1L).adverb("enthusiastically").verb("volunteers").preposition("at").noun("UNICEF").build(), 3,
+                PhraseDTO.builder().id(2L).adverb("happily").verb("sings").preposition("at").noun("party").build(), 5
+        );
+        when(phraseService.getPhraseInformationByUserId(userId)).thenReturn(Optional.of(phraseInformation));
+
+        List<AttributeDTO> pendingAttributes = List.of(
+                AttributeDTO.builder()
+                        .phrase(PhraseDTO.builder().id(3L).verb("review").adverb("carefully").noun("report").preposition("by").build())
+                        .userCount(0)
+                        .sequence(0)
+                        .build()
+        );
+        when(reviewSubmittingUserRepository.findToBeReviewedIdByUserId(userId)).thenReturn(List.of(3L));
+        when(toBeReviewedRepository.findById(3L)).thenReturn(Optional.of(
+                new ToBeReviewed(3L, false ,"review", "carefully", "by", "report")
+        ));
+
+        Optional<Map<String, List<AttributeDTO>>> result = attributesService.getAttributesByUserId(userId);
+
+        assertTrue(result.isPresent());
+        Map<String, List<AttributeDTO>> resultMap = result.get();
+
+        List<AttributeDTO> attributes = resultMap.get("attributes");
+        assertEquals(2, attributes.size());
+
+        // Validate the first attribute
+        AttributeDTO attr1 = attributes.get(0);
+        assertEquals(1L, attr1.phrase.id);
+        assertEquals("enthusiastically", attr1.phrase.adverb);
+        assertEquals("volunteers", attr1.phrase.verb);
+        assertEquals("at", attr1.phrase.preposition);
+        assertEquals("UNICEF", attr1.phrase.noun);
+        assertEquals(3, attr1.userCount);
+        assertEquals(1, attr1.sequence);
+
+        // Validate the second attribute
+        AttributeDTO attr2 = attributes.get(1);
+        assertEquals(2L, attr2.phrase.id);
+        assertEquals("happily", attr2.phrase.adverb);
+        assertEquals("sings", attr2.phrase.verb);
+        assertEquals("at", attr2.phrase.preposition);
+        assertEquals("party", attr2.phrase.noun);
+        assertEquals(5, attr2.userCount);
+        assertEquals(2, attr2.sequence);
+
+        // Verify pending attributes list
+        List<AttributeDTO> pendingAttributesResult = resultMap.get("pendingAttributes");
+        assertEquals(1, pendingAttributesResult.size());
+        AttributeDTO pendingAttr = pendingAttributesResult.get(0);
+        assertEquals(3L, pendingAttr.phrase.id);
+        assertEquals("review", pendingAttr.phrase.adverb);
+        assertEquals("carefully", pendingAttr.phrase.verb);
+        assertEquals("report", pendingAttr.phrase.noun);
+        assertEquals("by", pendingAttr.phrase.preposition);
+        assertEquals(0, pendingAttr.userCount);
+        assertEquals(0, pendingAttr.sequence);
+    }
+
+    @Test
+    public void testGetAttributesByUserId_WithPhrases() {
+        Long userId = 1L;
+
+        List<PhraseSequence> phraseSequences = Arrays.asList(
+                new PhraseSequence(userId, 1L, 1),
+                new PhraseSequence(userId, 2L, 2)
+        );
+
+
+        Map<PhraseDTO, Integer> phraseInfo = new HashMap<>();
+        PhraseDTO phrase1 = PhraseDTO.builder().id(1L).adverb("enthusiastically").verb("volunteers").preposition("at").noun("UNICEF").build();
+        PhraseDTO phrase2 = PhraseDTO.builder().id(2L).adverb("happily").verb("sings").preposition("at").noun("party").build();
+
+        phraseInfo.put(phrase1, 3);
+        phraseInfo.put(phrase2, 5);
+
+        when(phraseSequenceRepository.findByUserIdOrderByPosition(userId)).thenReturn(phraseSequences);
+        when(phraseService.getPhraseInformationByUserId(userId)).thenReturn(Optional.of(phraseInfo));
+
+        Optional<Map<String, List<AttributeDTO>>> result = attributesService.getAttributesByUserId(userId);
+
+        assertTrue(result.isPresent());
+        List<AttributeDTO> attributes = result.get().get("attributes");
+        assertNotNull(attributes);
+
+        List<AttributeDTO> pendingAttributes = result.get().get("pendingAttributes");
+        assertNotNull(pendingAttributes);
+
+        assertEquals(2, attributes.size());
+
+        // Validate the first attribute
+        AttributeDTO attr1 = attributes.get(0);
+        assertEquals(1L, attr1.phrase.id);
+        assertEquals("enthusiastically", attr1.phrase.adverb);
+        assertEquals("volunteers", attr1.phrase.verb);
+        assertEquals("at", attr1.phrase.preposition);
+        assertEquals("UNICEF", attr1.phrase.noun);
+        assertEquals(3, attr1.userCount);
+        assertEquals(1, attr1.sequence);
+
+        // Validate the second attribute
+        AttributeDTO attr2 = attributes.get(1);
+        assertEquals(2L, attr2.phrase.id);
+        assertEquals("happily", attr2.phrase.adverb);
+        assertEquals("sings", attr2.phrase.verb);
+        assertEquals("at", attr2.phrase.preposition);
+        assertEquals("party", attr2.phrase.noun);
+        assertEquals(5, attr2.userCount);
+        assertEquals(2, attr2.sequence);
+    }
+
+    @Test
+    public void testGetPhrasesToBeReviewedByUserId() {
+        Long userId = 1L;
+
+        List<Long> toBeReviewedIds = Arrays.asList(100L, 200L);
+        when(reviewSubmittingUserRepository.findToBeReviewedIdByUserId(userId)).thenReturn(toBeReviewedIds);
+
+        ToBeReviewed toBeReviewed1 = new ToBeReviewed(100L, true, "run", "quickly", "towards", "goal");
+        ToBeReviewed toBeReviewed2 = new ToBeReviewed(200L, false, "jump", "high", "over", "fence");
+
+        when(toBeReviewedRepository.findById(100L)).thenReturn(Optional.of(toBeReviewed1));
+        when(toBeReviewedRepository.findById(200L)).thenReturn(Optional.of(toBeReviewed2));
+
+        List<AttributeDTO> result = attributesService.getPhrasesToBeReviewedByUserId(userId);
+
+        // Assertions to verify the result
+        assertEquals(2, result.size());
+
+        // Verifying details of the first AttributeDTO
+        AttributeDTO attribute1 = result.get(0);
+        assertEquals(100L, attribute1.phrase.id);
+        assertEquals("run", attribute1.phrase.adverb);
+        assertEquals("quickly", attribute1.phrase.verb);
+        assertEquals("towards", attribute1.phrase.preposition);
+        assertEquals("goal", attribute1.phrase.noun);
+        assertEquals(0, attribute1.userCount);
+        assertEquals(0, attribute1.sequence);
+
+        // Verifying details of the second AttributeDTO
+        AttributeDTO attribute2 = result.get(1);
+        assertEquals(200L, attribute2.phrase.id);
+        assertEquals("jump", attribute2.phrase.adverb);
+        assertEquals("high", attribute2.phrase.verb);
+        assertEquals("over", attribute2.phrase.preposition);
+        assertEquals("fence", attribute2.phrase.noun);
+        assertEquals(0, attribute2.userCount);
+        assertEquals(0, attribute2.sequence);
+    }
   
     @Test
     public void testLoadSequence() {

@@ -91,39 +91,41 @@ public class AttributesAPIIT implements UserTestConstants, PhraseTestConstants {
         user = UserTestConstants.getUser3();
     }
 
-//    @Test
-//    public void getAttributesForUserWhenAttributesFound() throws Exception {
-//        Mockito.when(userPrincipalService.getUserPrincipalByEmail(Mockito.anyString()))
-//                .thenReturn(new UserPrincipal(user));
-//        String auth = AuthServiceImpl.generateAccessToken(user);
-//        Long userId = USER1_ID;
-//        PhraseDTO phraseDTO =
-//                PhraseDTO.builder()
-//                        .verb(VERB1_WORD)
-//                        .noun(NOUN1_WORD)
-//                        .adverb(ADVERB1_WORD)
-//                        .preposition(PREPOSITION1_WORD)
-//                        .build();
-//        AttributeDTO attributeDTO = AttributeDTO.builder().phrase(phraseDTO).build();
-//        List<AttributeDTO> expectedAttributes = List.of(attributeDTO);
-//        Optional<List<AttributeDTO>> opt = Optional.of(expectedAttributes);
-//        when(attributesService.getAttributesByUserId(anyLong())).thenReturn(opt);
-//        MvcResult result =
-//                this.mockMvc
-//                        .perform(
-//                                get("/api/attributes/{userId}", userId)
-//                                        .header("Authorization", "Bearer " + auth)
-//                                        .characterEncoding("utf-8"))
-//                        .andExpect(status().isOk())
-//                        .andReturn();
-//
-//        Type attributeDTOListType = new TypeToken<List<AttributeDTO>>() {
-//        }.getType();
-//
-//        List<AttributeDTO> actualAttributes =
-//                gson.fromJson(result.getResponse().getContentAsString(), attributeDTOListType);
-//        assertThat(actualAttributes).usingRecursiveComparison().isEqualTo(expectedAttributes);
-//    }
+    @Test
+    public void getAttributesForUserWhenAttributesFound() throws Exception {
+        Mockito.when(userPrincipalService.getUserPrincipalByEmail(Mockito.anyString()))
+                .thenReturn(new UserPrincipal(user));
+        String auth = AuthServiceImpl.generateAccessToken(user);
+        Long userId = USER1_ID;
+        PhraseDTO phraseDTO =
+                PhraseDTO.builder()
+                        .verb(VERB1_WORD)
+                        .noun(NOUN1_WORD)
+                        .adverb(ADVERB1_WORD)
+                        .preposition(PREPOSITION1_WORD)
+                        .build();
+        AttributeDTO attributeDTO = AttributeDTO.builder().phrase(phraseDTO).build();
+        List<AttributeDTO> expectedAttributes = List.of(attributeDTO);
+        Map<String, List<AttributeDTO>> expectedAttributesMap = Map.of("attributes", expectedAttributes);
+
+        Optional<Map<String, List<AttributeDTO>>> opt = Optional.of(expectedAttributesMap);
+        when(attributesService.getAttributesByUserId(anyLong())).thenReturn(opt);
+
+        MvcResult result =
+                this.mockMvc
+                        .perform(
+                                get("/api/attributes/{userId}", userId)
+                                        .header("Authorization", "Bearer " + auth)
+                                        .characterEncoding("utf-8"))
+                        .andExpect(status().isOk())
+                        .andReturn();
+
+        Type attributeDTOMapType = new TypeToken<Map<String, List<AttributeDTO>>>() {}.getType();
+        Map<String, List<AttributeDTO>> actualAttributesMap = gson.fromJson(
+                result.getResponse().getContentAsString(), attributeDTOMapType);
+
+        assertThat(actualAttributesMap).usingRecursiveComparison().isEqualTo(expectedAttributesMap);
+    }
 
     @Test
     public void getAttributesForUserWhenNoAttributesFound() throws Exception {

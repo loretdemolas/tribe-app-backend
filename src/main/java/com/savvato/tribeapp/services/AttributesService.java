@@ -15,5 +15,7 @@ public interface AttributesService {
     void updatePhraseSequences(long userId, PhraseSequenceDataRequest phrase);
 
     boolean loadSequence(PhraseSequenceRequest phrases);
+
+    List<AttributeDTO> getPhrasesToBeReviewedByUserId(Long userId);
 }
 

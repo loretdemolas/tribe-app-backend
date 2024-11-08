@@ -49,6 +49,10 @@ public class AttributesServiceImpl implements AttributesService {
         // Get all user phrases as phraseDTOs
         Optional<Map<PhraseDTO, Integer>> optUserPhraseDTOs = phraseService.getPhraseInformationByUserId(userId);
 
+        Map<String, List<AttributeDTO>> resultMap = new HashMap<>();
+        resultMap.put("attributes", Collections.emptyList());
+        resultMap.put("pendingAttributes", Collections.emptyList());
+
         // If there are phrases, build DTO and add to attributes list
         if (optUserPhraseDTOs.isPresent()) {
             Map<PhraseDTO, Integer> phraseDTOUserCountMap = optUserPhraseDTOs.get();
@@ -73,7 +77,6 @@ public class AttributesServiceImpl implements AttributesService {
             attributes.sort(Comparator.comparingLong(a -> (a.phrase.id)));
             List<AttributeDTO> pendingAttributes = getPhrasesToBeReviewedByUserId(userId);
 
-            Map<String, List<AttributeDTO>> resultMap = new HashMap<>();
             resultMap.put("attributes", attributes);
             resultMap.put("pendingAttributes", pendingAttributes);
 
@@ -81,7 +84,7 @@ public class AttributesServiceImpl implements AttributesService {
         }
 
         // If no phrases found, return an empty list
-        return Optional.of(Collections.emptyMap());
+        return Optional.of(resultMap);
     }
 
     public List<AttributeDTO> getPhrasesToBeReviewedByUserId(Long userId) {
